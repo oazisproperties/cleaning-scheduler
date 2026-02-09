@@ -54,10 +54,8 @@ export async function getUpcomingCheckouts(debug = false): Promise<Reservation[]
   const toDate = twoWeeksFromNow.toISOString().split("T")[0];
 
   // Fetch reservations with checkout in the next 2 weeks
-  // Use filters parameter for date range on checkOut
   const filters = JSON.stringify([
-    { field: "checkOut", operator: "$gte", value: fromDate },
-    { field: "checkOut", operator: "$lte", value: toDate },
+    { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
   const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode status listing.nickname listing.defaultCheckOutTime`;

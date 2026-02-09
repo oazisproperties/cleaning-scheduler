@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getUpcomingCheckouts } from "@/lib/guesty";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const reservations = await getUpcomingCheckouts();
+    const debug = request.nextUrl.searchParams.get("debug") === "true";
+    const reservations = await getUpcomingCheckouts(debug);
     return NextResponse.json(reservations);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

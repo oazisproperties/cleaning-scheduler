@@ -43,7 +43,7 @@ export interface Reservation {
   confirmationCode: string;
 }
 
-export async function getUpcomingCheckouts(): Promise<Reservation[]> {
+export async function getUpcomingCheckouts(debug = false): Promise<Reservation[] | Record<string, unknown>> {
   const token = await getAccessToken();
 
   const now = new Date();
@@ -60,7 +60,7 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
     { field: "checkOut", operator: "$lte", value: toDate },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode listing.nickname listing.defaultCheckOutTime`;
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode status listing.nickname listing.defaultCheckOutTime`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -69,6 +69,10 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
 
   if (!res.ok) throw new Error(`Guesty reservations failed: ${res.status}`);
   const data = await res.json();
+
+  if (debug) {
+    return { total: data.results?.length || 0, statuses: (data.results || []).map((r: Record<string, unknown>) => r.status), raw: data };
+  }
 
   return (data.results || [])
     .filter(

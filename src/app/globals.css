@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-teal: #5FB8AD;
+  --color-teal-dark: #4a9e94;
+  --color-orange: #D4874D;
+  --color-orange-dark: #c07640;
+  --color-cream: #F5F1EB;
+  --color-cream-dark: #E8E2D8;
+  --font-heading: "Playfair Display", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: #1a1a1a;
+}

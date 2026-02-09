@@ -40,7 +40,6 @@ export interface Reservation {
   checkOut: string;
   checkOutTime: string;
   guestName: string;
-  confirmationCode: string;
 }
 
 export async function getUpcomingCheckouts(): Promise<Reservation[]> {
@@ -58,7 +57,7 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
     { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode status listing.nickname listing.defaultCheckOutTime listing.title`;
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status listing.nickname listing.defaultCheckOutTime listing.title`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -89,7 +88,6 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
         checkOutTime:
           (listing?.defaultCheckOutTime as string) || "11:00",
         guestName: (r.guestName as string) || "Guest",
-        confirmationCode: (r.confirmationCode as string) || "",
       };
     });
 }

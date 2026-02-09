@@ -27,12 +27,14 @@ export async function POST(request: Request) {
     const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // 4 hours later
 
     const title = `Cleaning at ${propertyName}`;
+    const attendeeEmail = "colergetkathy@gmail.com";
 
     const ics = generateICS({
       title,
       startTime,
       endTime,
       description: `Cleaning scheduled after checkout at ${propertyName}`,
+      attendeeEmail,
     });
 
     // Send via Resend with ICS attachment

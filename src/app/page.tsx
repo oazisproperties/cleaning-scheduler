@@ -10,7 +10,6 @@ interface Reservation {
   checkOut: string;
   checkOutTime: string;
   guestName: string;
-  confirmationCode: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -20,6 +19,13 @@ function formatDate(dateStr: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function daysBetween(dateA: string, dateB: string): number {
+  const a = new Date(dateA);
+  const b = new Date(dateB);
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.round((b.getTime() - a.getTime()) / msPerDay);
 }
 
 export default function Home() {
@@ -38,7 +44,6 @@ export default function Home() {
           throw new Error(data.error || `Failed to fetch: ${res.status}`);
         }
         const data: Reservation[] = await res.json();
-        // Sort by checkout date
         data.sort(
           (a, b) =>
             new Date(a.checkOut).getTime() - new Date(b.checkOut).getTime()
@@ -137,46 +142,68 @@ export default function Home() {
               </h2>
             </div>
 
-            <ul className="divide-y divide-cream-dark">
-              {items.map((r) => {
+            <ul>
+              {items.map((r, idx) => {
                 const isSent = sentIds.has(r.id);
                 const isSending = sendingIds.has(r.id);
+                const nextReservation = items[idx + 1];
+                const gap = nextReservation
+                  ? daysBetween(r.checkOut, nextReservation.checkIn)
+                  : null;
 
                 return (
-                  <li
-                    key={r.id}
-                    className="flex items-center justify-between px-4 py-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-sm font-medium">
-                          {formatDate(r.checkIn)} &rarr;{" "}
-                          {formatDate(r.checkOut)}
-                        </span>
+                  <li key={r.id}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm font-medium">
+                            {formatDate(r.checkIn)} &rarr;{" "}
+                            {formatDate(r.checkOut)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {r.guestName}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5 truncate">
-                        {r.guestName}
-                        {r.confirmationCode && ` — ${r.confirmationCode}`}
-                      </p>
+
+                      <div className="flex items-center gap-2 ml-3 shrink-0">
+                        {isSending && (
+                          <div className="w-4 h-4 border-2 border-teal border-t-transparent rounded-full animate-spin" />
+                        )}
+                        {isSent && (
+                          <span className="text-xs text-teal font-medium">
+                            Sent!
+                          </span>
+                        )}
+                        <input
+                          type="checkbox"
+                          checked={isSent}
+                          disabled={isSent || isSending}
+                          onChange={() => handleSendInvite(r)}
+                          className="w-5 h-5 rounded accent-teal cursor-pointer disabled:cursor-default disabled:opacity-60"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 ml-3 shrink-0">
-                      {isSending && (
-                        <div className="w-4 h-4 border-2 border-teal border-t-transparent rounded-full animate-spin" />
-                      )}
-                      {isSent && (
-                        <span className="text-xs text-teal font-medium">
-                          Sent!
+                    {gap !== null && (
+                      <div className="flex items-center px-4 py-1.5 bg-cream">
+                        <div className="flex-1 border-t border-cream-dark" />
+                        <span
+                          className={`text-xs font-medium px-2 ${
+                            gap === 0
+                              ? "text-red-500"
+                              : gap === 1
+                                ? "text-orange"
+                                : "text-gray-400"
+                          }`}
+                        >
+                          {gap === 0
+                            ? "Same-day turnover"
+                            : `${gap} day${gap !== 1 ? "s" : ""} to clean`}
                         </span>
-                      )}
-                      <input
-                        type="checkbox"
-                        checked={isSent}
-                        disabled={isSent || isSending}
-                        onChange={() => handleSendInvite(r)}
-                        className="w-5 h-5 rounded accent-teal cursor-pointer disabled:cursor-default disabled:opacity-60"
-                      />
-                    </div>
+                        <div className="flex-1 border-t border-cream-dark" />
+                      </div>
+                    )}
                   </li>
                 );
               })}

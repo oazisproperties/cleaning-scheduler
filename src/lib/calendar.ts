@@ -3,8 +3,9 @@ export function generateICS(params: {
   startTime: Date;
   endTime: Date;
   description?: string;
+  attendeeEmail?: string;
 }): string {
-  const { title, startTime, endTime, description } = params;
+  const { title, startTime, endTime, description, attendeeEmail } = params;
 
   function formatDate(date: Date): string {
     return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -24,6 +25,10 @@ export function generateICS(params: {
     `SUMMARY:${title}`,
     description ? `DESCRIPTION:${description.replace(/\n/g, "\\n")}` : "",
     `DTSTAMP:${formatDate(new Date())}`,
+    "ORGANIZER;CN=oAZis Properties:mailto:admin@oazisproperties.com",
+    attendeeEmail
+      ? `ATTENDEE;RSVP=TRUE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:${attendeeEmail}`
+      : "",
     "STATUS:CONFIRMED",
     "END:VEVENT",
     "END:VCALENDAR",

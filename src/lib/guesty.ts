@@ -43,7 +43,7 @@ export interface Reservation {
   confirmationCode: string;
 }
 
-export async function getUpcomingCheckouts(debug = false): Promise<Reservation[] | Record<string, unknown>> {
+export async function getUpcomingCheckouts(): Promise<Reservation[]> {
   const token = await getAccessToken();
 
   const now = new Date();
@@ -58,7 +58,7 @@ export async function getUpcomingCheckouts(debug = false): Promise<Reservation[]
     { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode status listing.nickname listing.defaultCheckOutTime`;
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName confirmationCode status listing.nickname listing.defaultCheckOutTime listing.title`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -67,10 +67,6 @@ export async function getUpcomingCheckouts(debug = false): Promise<Reservation[]
 
   if (!res.ok) throw new Error(`Guesty reservations failed: ${res.status}`);
   const data = await res.json();
-
-  if (debug) {
-    return { total: data.results?.length || 0, statuses: (data.results || []).map((r: Record<string, unknown>) => r.status), raw: data };
-  }
 
   return (data.results || [])
     .filter(

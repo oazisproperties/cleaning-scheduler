@@ -4,7 +4,7 @@ const API_BASE = "https://open-api.guesty.com/v1";
 // In-memory token cache
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(attempt = 0): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 300000) {
     return cachedToken.token;
   }
@@ -23,11 +23,11 @@ async function getAccessToken(): Promise<string> {
     }),
   });
 
-  if (res.status === 429) {
+  if (res.status === 429 && attempt < 2) {
     const retryAfter = res.headers.get("retry-after");
     const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 5000;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
-    return getAccessToken();
+    return getAccessToken(attempt + 1);
   }
 
   if (!res.ok) throw new Error(`Guesty auth failed: ${res.status}`);
@@ -64,7 +64,7 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
     { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status customFields listing.nickname listing.defaultCheckOutTime listing.title`;
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status listing.nickname listing.defaultCheckOutTime listing.title`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },

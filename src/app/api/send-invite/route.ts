@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createCalendarEvent } from "@/lib/google-calendar";
+import { updateKathClean } from "@/lib/guesty";
 
 export async function POST(request: Request) {
   try {
@@ -24,13 +25,17 @@ export async function POST(request: Request) {
     const startTime = new Date(year, month - 1, day, hours, minutes);
     const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000);
 
-    await createCalendarEvent({
-      summary: `Cleaning at ${propertyName}`,
-      description: `Cleaning scheduled after checkout at ${propertyName}`,
-      startTime,
-      endTime,
-      attendeeEmail: "colergetkathy@gmail.com",
-    });
+    // Send Google Calendar invite and update Guesty custom field in parallel
+    await Promise.all([
+      createCalendarEvent({
+        summary: `Cleaning at ${propertyName}`,
+        description: `Cleaning scheduled after checkout at ${propertyName}`,
+        startTime,
+        endTime,
+        attendeeEmail: "colergetkathy@gmail.com",
+      }),
+      updateKathClean(reservationId),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

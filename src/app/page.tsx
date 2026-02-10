@@ -10,6 +10,7 @@ interface Reservation {
   checkOut: string;
   checkOutTime: string;
   guestName: string;
+  kathClean: boolean;
 }
 
 function formatDate(dateStr: string): string {
@@ -49,6 +50,17 @@ export default function Home() {
             new Date(a.checkOut).getTime() - new Date(b.checkOut).getTime()
         );
         setReservations(data);
+
+        // Pre-populate sentIds from reservations already marked in Guesty
+        const alreadySent = new Set<string>();
+        for (const r of data) {
+          if (r.kathClean) {
+            alreadySent.add(r.id);
+          }
+        }
+        if (alreadySent.size > 0) {
+          setSentIds(alreadySent);
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
@@ -125,7 +137,7 @@ export default function Home() {
 
       {!loading && !error && reservations.length === 0 && (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">No upcoming checkouts in the next 2 weeks</p>
+          <p className="text-lg">No upcoming checkouts in the next 30 days</p>
         </div>
       )}
 
@@ -146,6 +158,7 @@ export default function Home() {
               {items.map((r, idx) => {
                 const isSent = sentIds.has(r.id);
                 const isSending = sendingIds.has(r.id);
+                const isFromGuesty = r.kathClean && isSent;
                 const nextReservation = items[idx + 1];
                 const gap = nextReservation
                   ? daysBetween(r.checkOut, nextReservation.checkIn)
@@ -172,7 +185,7 @@ export default function Home() {
                         )}
                         {isSent && (
                           <span className="text-xs text-teal font-medium">
-                            Sent!
+                            {isFromGuesty ? "Scheduled" : "Sent!"}
                           </span>
                         )}
                         <input

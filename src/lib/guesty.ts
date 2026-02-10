@@ -47,24 +47,24 @@ export interface Reservation {
   checkOut: string;
   checkOutTime: string;
   guestName: string;
+  kathClean: boolean;
 }
 
 export async function getUpcomingCheckouts(): Promise<Reservation[]> {
   const token = await getAccessToken();
 
   const now = new Date();
-  const twoWeeksFromNow = new Date();
-  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+  const thirtyDaysOut = new Date();
+  thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
 
   const fromDate = now.toISOString().split("T")[0];
-  const toDate = twoWeeksFromNow.toISOString().split("T")[0];
+  const toDate = thirtyDaysOut.toISOString().split("T")[0];
 
-  // Fetch reservations with checkout in the next 2 weeks
   const filters = JSON.stringify([
     { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status listing.nickname listing.defaultCheckOutTime listing.title`;
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status customFields listing.nickname listing.defaultCheckOutTime listing.title`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -83,6 +83,19 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
       const listing = r.listing as
         | Record<string, unknown>
         | undefined;
+
+      // Check kath_clean custom field
+      const customFields = r.customFields as
+        | Array<{ fieldId: string; key: string; value: unknown }>
+        | undefined;
+      const kathField = customFields?.find(
+        (f) => f.key === "kath_clean"
+      );
+      const kathClean =
+        kathField?.value === "yes" ||
+        kathField?.value === "Yes" ||
+        kathField?.value === true;
+
       return {
         id: r._id as string,
         listingId: r.listingId as string,
@@ -95,6 +108,27 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
         checkOutTime:
           (listing?.defaultCheckOutTime as string) || "11:00",
         guestName: (r.guestName as string) || "Guest",
+        kathClean,
       };
     });
+}
+
+export async function updateKathClean(reservationId: string): Promise<void> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${API_BASE}/reservations/${reservationId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      customFields: [{ key: "kath_clean", value: "yes" }],
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to update kath_clean: ${res.status} ${text}`);
+  }
 }

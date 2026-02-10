@@ -23,6 +23,13 @@ async function getAccessToken(): Promise<string> {
     }),
   });
 
+  if (res.status === 429) {
+    const retryAfter = res.headers.get("retry-after");
+    const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 5000;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    return getAccessToken();
+  }
+
   if (!res.ok) throw new Error(`Guesty auth failed: ${res.status}`);
   const data = await res.json();
   cachedToken = {

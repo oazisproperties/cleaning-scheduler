@@ -25,7 +25,7 @@ export async function createCalendarEvent(params: {
   const calendar = google.calendar({ version: "v3", auth });
 
   const event = await calendar.events.insert({
-    calendarId: attendeeEmail,
+    calendarId: "primary",
     sendUpdates: "all",
     requestBody: {
       summary,

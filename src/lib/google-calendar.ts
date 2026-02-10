@@ -17,16 +17,14 @@ export async function createCalendarEvent(params: {
   description: string;
   startTime: Date;
   endTime: Date;
-  attendeeEmail: string;
 }) {
-  const { summary, description, startTime, endTime, attendeeEmail } = params;
+  const { summary, description, startTime, endTime } = params;
 
   const auth = getAuth();
   const calendar = google.calendar({ version: "v3", auth });
 
   const event = await calendar.events.insert({
-    calendarId: attendeeEmail,
-    sendUpdates: "all",
+    calendarId: "primary",
     requestBody: {
       summary,
       description,
@@ -38,7 +36,6 @@ export async function createCalendarEvent(params: {
         dateTime: endTime.toISOString(),
         timeZone: "America/Phoenix",
       },
-      attendees: [{ email: attendeeEmail }],
     },
   });
 

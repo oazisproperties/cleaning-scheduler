@@ -4,12 +4,21 @@ const API_BASE = "https://open-api.guesty.com/v1";
 // In-memory token cache
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> {
+  return Promise.race([
+    fetch(url, options),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 async function getAccessToken(attempt = 0): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 300000) {
     return cachedToken.token;
   }
 
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetchWithTimeout(TOKEN_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -64,12 +73,17 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
     { field: "checkOut", operator: "$between", from: `${fromDate}T00:00:00.000Z`, to: `${toDate}T23:59:59.999Z` },
   ]);
 
-  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=_id listingId checkIn checkOut guestName status listing.nickname listing.defaultCheckOutTime listing.title`;
+  const fields = [
+    "_id", "listingId", "checkIn", "checkOut", "guestName",
+    "status", "listing.nickname", "listing.defaultCheckOutTime", "listing.title",
+  ].join(" ");
 
-  const res = await fetch(url, {
+  const url = `${API_BASE}/reservations?filters=${encodeURIComponent(filters)}&limit=100&fields=${encodeURIComponent(fields)}`;
+
+  const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
-  });
+  }, 15000);
 
   if (!res.ok) throw new Error(`Guesty reservations failed: ${res.status}`);
   const data = await res.json();
@@ -116,7 +130,7 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
 export async function updateKathClean(reservationId: string): Promise<void> {
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE}/reservations/${reservationId}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/reservations/${reservationId}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,

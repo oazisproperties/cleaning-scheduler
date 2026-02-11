@@ -121,22 +121,92 @@ export async function getUpcomingCheckouts(): Promise<Reservation[]> {
   }
 }
 
+// In-memory cache for kath_clean field ID (doesn't change, only needs one lookup)
+let kathCleanFieldId: string | null = null;
+
+async function discoverKathCleanFieldId(
+  reservationId: string
+): Promise<string> {
+  if (kathCleanFieldId) return kathCleanFieldId;
+
+  const token = await getAccessToken();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/reservations/${reservationId}/custom-fields`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`GET custom-fields failed: ${res.status} ${text}`);
+    }
+
+    const fields = await res.json();
+    console.log(
+      "Custom fields on reservation:",
+      JSON.stringify(fields, null, 2)
+    );
+
+    const kathField = Array.isArray(fields)
+      ? fields.find(
+          (f: Record<string, unknown>) =>
+            f.key === "kath_clean" || f.fieldId === "kath_clean"
+        )
+      : null;
+
+    if (!kathField) {
+      throw new Error(
+        `kath_clean field not found. Available fields: ${JSON.stringify(fields)}`
+      );
+    }
+
+    const fieldId =
+      (kathField as Record<string, unknown>).fieldId as string | undefined;
+    if (!fieldId) {
+      throw new Error(
+        `kath_clean found but missing fieldId: ${JSON.stringify(kathField)}`
+      );
+    }
+
+    kathCleanFieldId = fieldId;
+    return fieldId;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function updateKathClean(reservationId: string): Promise<void> {
+  const fieldId = await discoverKathCleanFieldId(reservationId);
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE}/reservations/${reservationId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      customFields: [{ key: "kath_clean", value: "yes" }],
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to update kath_clean: ${res.status} ${text}`);
+  try {
+    const res = await fetch(
+      `${API_BASE}/reservations/${reservationId}/custom-fields`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([{ fieldId, value: "yes" }]),
+        signal: controller.signal,
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed to update kath_clean: ${res.status} ${text}`);
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
